@@ -1,11 +1,15 @@
-use std::fs;
+use std::{collections::HashMap, fs};
 
 use csv::Reader;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
-use crate::opts::CsvOpts;
+use crate::opts::{CsvOpts, OutputFormat};
 use anyhow::Ok;
 
+const TOML_ROOT_KEY: &str = "data";
+
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 struct Player {
@@ -19,17 +23,43 @@ struct Player {
 }
 
 pub fn process_csv(opts: &CsvOpts) -> anyhow::Result<()> {
-    println!("Processing CSV file: {}", opts.input);
+    let output = match &opts.output {
+        Some(output) => output.clone(),
+        None => format!("output.{}", opts.format),
+    };
+    println!(
+        "Processing CSV file: {}, output file: {}",
+        opts.input, output
+    );
     let mut reader_builder = Reader::from_path(&opts.input)?;
-    let mut ret = Vec::with_capacity(128);
-    for result in reader_builder.deserialize() {
-        let player: Player = result?;
-        // println!("{:?}", player);
-        ret.push(player);
+    let mut parsed_records = Vec::with_capacity(128);
+    let headers = reader_builder.headers()?.clone();
+    for result in reader_builder.records() {
+        let record = result?;
+        let json_value = serde_json::Value::Object(
+            headers
+                .iter()
+                // zip() the headers and record into a JSON object
+                .zip(record.iter())
+                .map(|(k, v)| (k.to_string(), Value::String(v.to_string())))
+                .collect(),
+        );
+        parsed_records.push(json_value);
     }
 
-    let json = serde_json::to_string_pretty(&ret)?;
-    fs::write(&opts.output, json)?;
+    let content = match opts.format {
+        OutputFormat::Json => serde_json::to_string_pretty(&parsed_records)?,
+        OutputFormat::Yaml => serde_yaml::to_string(&parsed_records)?,
+        // TOML format requires the root element
+        OutputFormat::Toml => {
+            let mut map = HashMap::new();
+            map.insert(TOML_ROOT_KEY, &parsed_records);
+            toml::to_string(&map)?
+        }
+    };
+
+    fs::write(output, content)?;
+    println!("File converted successfully.");
 
     Ok(())
 }
