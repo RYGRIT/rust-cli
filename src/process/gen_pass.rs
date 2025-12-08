@@ -18,24 +18,17 @@ pub fn process_genpass(opts: &GenPassOpts) -> anyhow::Result<()> {
         anyhow::bail!("Password length must be at least 6");
     }
 
-    if opts.uppercase {
-        chars.extend_from_slice(UPPER_CHARSET);
-        password.push(UPPER_CHARSET[rng.random_range(0..UPPER_CHARSET.len())]);
-    }
-
-    if opts.lowercase {
-        chars.extend_from_slice(LOWER_CHARSET);
-        password.push(LOWER_CHARSET[rng.random_range(0..LOWER_CHARSET.len())]);
-    }
-
-    if opts.numbers {
-        chars.extend_from_slice(DIGIT_CHARSET);
-        password.push(DIGIT_CHARSET[rng.random_range(0..DIGIT_CHARSET.len())]);
-    }
-
-    if opts.special {
-        chars.extend_from_slice(SYMBOL_CHARSET);
-        password.push(SYMBOL_CHARSET[rng.random_range(0..SYMBOL_CHARSET.len())]);
+    // Ensure at least one character from each selected set is included
+    for (include, charset) in [
+        (opts.uppercase, UPPER_CHARSET),
+        (opts.lowercase, LOWER_CHARSET),
+        (opts.numbers, DIGIT_CHARSET),
+        (opts.special, SYMBOL_CHARSET),
+    ] {
+        if include {
+            chars.extend_from_slice(charset);
+            password.push(charset[rng.random_range(0..charset.len())]);
+        }
     }
 
     if chars.is_empty() {
@@ -53,8 +46,8 @@ pub fn process_genpass(opts: &GenPassOpts) -> anyhow::Result<()> {
 
     println!("Generated password: {}", password);
 
-    // output password strength in stderr
     let estimate = zxcvbn(&password, &[]);
+    // output password strength in stderr
     eprintln!("Password strength: {}", estimate.score());
 
     Ok(())
