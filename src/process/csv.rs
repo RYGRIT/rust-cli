@@ -4,8 +4,9 @@ use csv::Reader;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::opts::{CsvOpts, OutputFormat};
 use anyhow::Ok;
+
+use crate::cli::{CsvOpts, OutputFormat};
 
 const TOML_ROOT_KEY: &str = "data";
 

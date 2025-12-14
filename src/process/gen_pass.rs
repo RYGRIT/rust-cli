@@ -1,7 +1,7 @@
 use rand::{Rng, seq::SliceRandom};
 use zxcvbn::zxcvbn;
 
-use crate::opts::GenPassOpts;
+use crate::cli::GenPassOpts;
 
 const UPPER_CHARSET: &[u8] = b"ABCDEFGHJKLMNPQRSTUVWXYZ";
 const LOWER_CHARSET: &[u8] = b"abcdefghijkmnopqrstuvwxyz";
